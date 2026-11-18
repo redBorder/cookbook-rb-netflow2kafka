@@ -10,7 +10,7 @@ module Netflow2kafka
     # x2kafka enriches each flow with the whole enrichment_map entry matching the
     # exporter IP, so every sensor IP gets one flat entry. home_nets and span_port
     # are per listener in x2kafka, so they are merged across all the sensors.
-    # Ports, brokers, topic and template TTL come from the node['netflow2kafka'] attributes.
+    # Ports, brokers, topic and template TTL come from the node['redborder-netflow2kafka'] attributes.
     # memory (KB) sizes the in-memory queue of x2kafka.
     def x2kafka_config(sensors, memory = nil)
       enrichment_map = {}
@@ -22,7 +22,7 @@ module Netflow2kafka
         begin
           node_info = Chef::Node.load(sensor)
         rescue => e
-          Chef::Log.warn("netflow2kafka: skipping sensor #{sensor}: #{e.message}")
+          Chef::Log.warn("redborder-netflow2kafka: skipping sensor #{sensor}: #{e.message}")
           next
         end
 
@@ -34,7 +34,7 @@ module Netflow2kafka
         # only one entry per exporter IP: the default observation wins over the rest
         observation_id = rb['observation_id'].to_s.empty? ? 'default' : rb['observation_id'].to_s
         if observations.key?(ip) && (observations[ip] == 'default' || observation_id != 'default')
-          Chef::Log.warn("netflow2kafka: exporter #{ip} already mapped, ignoring observation #{observation_id} of #{sensor}")
+          Chef::Log.warn("redborder-netflow2kafka: exporter #{ip} already mapped, ignoring observation #{observation_id} of #{sensor}")
           next
         end
         observations[ip] = observation_id
@@ -59,34 +59,34 @@ module Netflow2kafka
             home_nets << network
           rescue IPAddr::Error
             # a single invalid CIDR makes x2kafka drop all the home_nets
-            Chef::Log.warn("netflow2kafka: ignoring invalid homenet '#{network}' of #{sensor}")
+            Chef::Log.warn("redborder-netflow2kafka: ignoring invalid homenet '#{network}' of #{sensor}")
           end
         end
       end
 
       listener = {
-        'name' => 'netflow2kafka',
+        'name' => 'redborder-netflow2kafka',
         'proto' => 'netflow',
         'bind' => '0.0.0.0',
-        'port' => node['netflow2kafka']['port'],
-        'topic' => node['netflow2kafka']['kafka_topic'],
+        'port' => node['redborder-netflow2kafka']['port'],
+        'topic' => node['redborder-netflow2kafka']['kafka_topic'],
         'span_port' => !span_ports.empty? && span_ports.all?,
         'enrichment_key' => 'sensor_ip',
         'enrichment_map' => enrichment_map,
-        'template_ttl_seconds' => node['netflow2kafka']['template_ttl'],
+        'template_ttl_seconds' => node['redborder-netflow2kafka']['template_ttl'],
       }
       # without home_nets x2kafka falls back to the private ranges
       listener['home_nets'] = home_nets.uniq unless home_nets.empty?
 
       config = {
-        'brokers' => node['netflow2kafka']['kafka_brokers'].to_a,
-        'topic' => node['netflow2kafka']['kafka_topic'],
-        'client_id' => 'netflow2kafka',
+        'brokers' => node['redborder-netflow2kafka']['kafka_brokers'].to_a,
+        'topic' => node['redborder-netflow2kafka']['kafka_topic'],
+        'client_id' => 'redborder-netflow2kafka',
         'async' => true,
         'stats_socket' => '/run/redborder-netflow2kafka/redborder-netflow2kafka.sock',
         # keepalived health checks /health on this port from the other managers
         'stats_bind' => '0.0.0.0',
-        'stats_port' => node['netflow2kafka']['stats_port'],
+        'stats_port' => node['redborder-netflow2kafka']['stats_port'],
         'hosts_path' => '/etc/objects',
         'applications_file' => '/etc/objects/applications',
         'listeners' => [listener],

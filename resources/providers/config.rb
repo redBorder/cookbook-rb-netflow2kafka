@@ -158,12 +158,12 @@ end
 
 action :register do
   begin
-    unless node['netflow2kafka']['registered']
+    unless node['redborder-netflow2kafka']['registered']
       query = {}
-      query['ID'] = "netflow2kafka-#{node['hostname']}"
-      query['Name'] = 'netflow2kafka'
+      query['ID'] = "redborder-netflow2kafka-#{node['hostname']}"
+      query['Name'] = 'redborder-netflow2kafka'
       query['Address'] = "#{node['ipaddress']}"
-      query['Port'] = node['netflow2kafka']['port']
+      query['Port'] = node['redborder-netflow2kafka']['port']
       json_query = Chef::JSONCompat.to_json(query)
 
       execute 'Register service in consul' do
@@ -171,9 +171,9 @@ action :register do
         action :nothing
       end.run_action(:run)
 
-      node.normal['netflow2kafka']['registered'] = true
+      node.normal['redborder-netflow2kafka']['registered'] = true
     end
-    Chef::Log.info('netflow2kafka service has been registered in consul')
+    Chef::Log.info('redborder-netflow2kafka service has been registered in consul')
   rescue => e
     Chef::Log.error(e.message)
   end
@@ -181,15 +181,15 @@ end
 
 action :deregister do
   begin
-    if node['netflow2kafka']['registered']
+    if node['redborder-netflow2kafka']['registered']
       execute 'Deregister service in consul' do
-        command "curl -X PUT http://localhost:8500/v1/agent/service/deregister/netflow2kafka-#{node['hostname']} &>/dev/null"
+        command "curl -X PUT http://localhost:8500/v1/agent/service/deregister/redborder-netflow2kafka-#{node['hostname']} &>/dev/null"
         action :nothing
       end.run_action(:run)
 
-      node.normal['netflow2kafka']['registered'] = false
+      node.normal['redborder-netflow2kafka']['registered'] = false
     end
-    Chef::Log.info('netflow2kafka service has been deregistered from consul')
+    Chef::Log.info('redborder-netflow2kafka service has been deregistered from consul')
   rescue => e
     Chef::Log.error(e.message)
   end
